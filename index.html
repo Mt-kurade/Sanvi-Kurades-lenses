@@ -512,13 +512,13 @@
       <a href="gallery.html" class="contact-link">View Full Gallery</a>
     </div>
   </div>
-  <div class="contact-form reveal">
-    <div class="form-group"><input type="text" placeholder="Your Name"></div>
-    <div class="form-group"><input type="email" placeholder="Email Address"></div>
-    <div class="form-group"><input type="text" placeholder="Subject / Project"></div>
-    <div class="form-group"><textarea rows="4" placeholder="Tell me about the project..."></textarea></div>
-    <button class="form-submit">Send Message →</button>
-  </div>
+    <form class="contact-form reveal" action="https://formspree.io/f/xlgpdplg" method="POST">
+    <div class="form-group"><input type="text" name="name" placeholder="Your Name"></div>
+    <div class="form-group"><input type="email" name="email" placeholder="Email Address"></div>
+    <div class="form-group"><input type="text" name="subject" placeholder="Subject / Project"></div>
+    <div class="form-group"><textarea rows="4" name="message" placeholder="Tell me about the project..."></textarea></div>
+    <button type="submit" class="form-submit">Send Message →</button>
+    </form>
 </section>
 
 <!-- FOOTER -->
