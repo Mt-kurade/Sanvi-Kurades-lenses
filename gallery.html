@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery — Sanvi Kurade Photography</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0a0a0c;
+    --paper: #f0ece3;
+    --stone: #8a8478;
+    --glacier: #b8c4c8;
+    --dusk: #1a1520;
+    --gold: #c8a96e;
+    --rust: #c4603a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink); color: var(--paper);
+    font-family: 'Space Mono', monospace;
+    overflow-x: hidden; cursor: crosshair;
+  }
+
+  /* ── LOADER ── */
+  #loader {
+    position: fixed; inset: 0; background: var(--ink);
+    z-index: 9999; display: flex; align-items: center;
+    justify-content: center; flex-direction: column; gap: 1rem;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+  }
+  #loader.hide { opacity: 0; visibility: hidden; }
+  #loader-text { font-size: 0.6rem; letter-spacing: 0.35em; color: var(--stone); animation: pulse 1.5s ease-in-out infinite; }
+  #loader-bar { width: 180px; height: 1px; background: rgba(138,132,120,0.3); position: relative; overflow: hidden; }
+  #loader-bar::after { content:''; position:absolute; left:-100%; top:0; width:100%; height:100%; background:var(--gold); animation:loadbar 1.8s ease forwards; }
+  @keyframes loadbar { to { left:100%; } }
+  @keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+  /* ── ASCII SKY ── */
+  #ascii-sky { position:fixed; inset:0; pointer-events:none; z-index:1; overflow:hidden; }
+  .ascii-entity {
+    position:absolute; font-family:'Space Mono',monospace;
+    font-size:0.72rem; line-height:1; white-space:pre;
+    pointer-events:none; will-change:transform;
+    color:var(--gold); opacity:0.35;
+  }
+
+  /* ── CURSOR ── */
+  .cursor-dot { position:fixed; width:6px; height:6px; background:var(--gold); border-radius:50%; pointer-events:none; z-index:9999; mix-blend-mode:difference; }
+  .cursor-ring { position:fixed; width:28px; height:28px; border:1px solid rgba(200,169,110,0.4); border-radius:50%; pointer-events:none; z-index:9998; transition:width .2s,height .2s; }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    padding: 1.4rem 3rem; display: flex;
+    justify-content: space-between; align-items: center;
+    background: rgba(10,10,12,0.95);
+    border-bottom: 1px solid rgba(138,132,120,0.12);
+    backdrop-filter: blur(8px);
+  }
+  .nav-logo { font-family:'DM Serif Display',serif; font-size:1.3rem; letter-spacing:0.12em; color:var(--paper); text-decoration:none; }
+  .nav-logo span { color:var(--gold); }
+  .nav-links { display:flex; gap:2.5rem; list-style:none; }
+  .nav-links a { font-size:0.58rem; letter-spacing:0.25em; color:var(--stone); text-decoration:none; text-transform:uppercase; transition:color 0.25s; }
+  .nav-links a:hover, .nav-links a.active { color:var(--gold); }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    position: relative; z-index: 2;
+    padding: 5rem 3rem 3rem;
+    border-bottom: 1px solid rgba(138,132,120,0.12);
+  }
+  .page-header-inner {
+    display: flex; justify-content: space-between; align-items: flex-end;
+  }
+  .page-eyebrow { font-size:0.55rem; letter-spacing:0.4em; color:var(--gold); text-transform:uppercase; margin-bottom:0.8rem; }
+  .page-title { font-family:'DM Serif Display',serif; font-size:clamp(2.5rem,5vw,4.5rem); line-height:0.95; color:var(--paper); }
+  .page-title em { font-style:italic; color:var(--glacier); }
+  .page-count { font-size:0.55rem; letter-spacing:0.25em; color:var(--stone); }
+  .page-count span { color:var(--gold); font-family:'DM Serif Display',serif; font-size:1.8rem; display:block; margin-bottom:0.2rem; }
+
+  /* ── LIGHTBOX ── */
+  #lightbox {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: rgba(10,10,12,0.96);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox-img {
+    max-width: 90vw; max-height: 80vh;
+    object-fit: contain; display: block;
+  }
+  #lightbox-caption {
+    margin-top: 1.2rem; text-align: center;
+  }
+  #lightbox-title { font-family:'DM Serif Display',serif; font-size:1.3rem; color:var(--paper); }
+  #lightbox-meta { font-size:0.55rem; letter-spacing:0.2em; color:var(--gold); text-transform:uppercase; margin-top:0.3rem; }
+  .lb-close {
+    position: absolute; top: 1.5rem; right: 2rem;
+    background: none; border: none; color: var(--stone);
+    font-size: 1.5rem; cursor: crosshair; transition: color 0.2s;
+  }
+  .lb-close:hover { color: var(--paper); }
+  .lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: none; border: 1px solid rgba(138,132,120,0.25);
+    color: var(--stone); font-size: 1.2rem; cursor: crosshair;
+    width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .lb-nav:hover { border-color: var(--gold); color: var(--gold); }
+  #lb-prev { left: 1.5rem; }
+  #lb-next { right: 1.5rem; }
+
+  /* ── GALLERY GRID ── */
+  .gallery-wrap {
+    position: relative; z-index: 2;
+    padding: 3rem;
+  }
+
+  /* 3-column grid, all horizontal frames */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  /* Every 7th card spans full width as a cinematic banner */
+  .gallery-grid .gc:nth-child(7n) {
+    grid-column: 1 / -1;
+  }
+
+  .gc {
+    position: relative; overflow: hidden;
+    background: var(--dusk); cursor: crosshair;
+    aspect-ratio: 16/9;
+  }
+  /* Wide banner cards */
+  .gallery-grid .gc:nth-child(7n) { aspect-ratio: 21/6; }
+
+  .gc img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block; transition: transform 0.55s ease;
+  }
+  .gc:hover img { transform: scale(1.03); }
+
+  /* Placeholder when image not found */
+  .gc-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; letter-spacing: 0.2em; color: rgba(138,132,120,0.35);
+    text-transform: uppercase; font-family: 'Space Mono', monospace;
+  }
+  /* Gradient placeholder fills */
+  .gc:nth-child(1)  .gc-ph { background: linear-gradient(155deg,#0d1b2a,#1a3a2e); }
+  .gc:nth-child(2)  .gc-ph { background: linear-gradient(200deg,#1a2535,#151820); }
+  .gc:nth-child(3)  .gc-ph { background: linear-gradient(140deg,#0a0f14,#2d3540); }
+  .gc:nth-child(4)  .gc-ph { background: linear-gradient(170deg,#1a1a2e,#3a2d40); }
+  .gc:nth-child(5)  .gc-ph { background: linear-gradient(150deg,#0d1a10,#2a3d2a); }
+  .gc:nth-child(6)  .gc-ph { background: linear-gradient(160deg,#1a1520,#2d1f2a); }
+  .gc:nth-child(7)  .gc-ph { background: linear-gradient(180deg,#0a1520,#0d2030); }
+  .gc:nth-child(8)  .gc-ph { background: linear-gradient(155deg,#1a2010,#1a2510); }
+  .gc:nth-child(9)  .gc-ph { background: linear-gradient(140deg,#201a10,#201a10); }
+  .gc:nth-child(10) .gc-ph { background: linear-gradient(160deg,#10201a,#2a3525); }
+  .gc:nth-child(11) .gc-ph { background: linear-gradient(180deg,#1a1530,#1a1520); }
+  .gc:nth-child(12) .gc-ph { background: linear-gradient(140deg,#0d1520,#152030); }
+  .gc:nth-child(13) .gc-ph { background: linear-gradient(170deg,#1a2010,#2d3520); }
+  .gc:nth-child(14) .gc-ph { background: linear-gradient(150deg,#201015,#301520); }
+  .gc:nth-child(15) .gc-ph { background: linear-gradient(160deg,#0d1a1a,#1a2d2d); }
+  .gc:nth-child(16) .gc-ph { background: linear-gradient(140deg,#1a0d20,#2d1535); }
+
+  .gc-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(10,10,12,0.88) 0%, transparent 50%);
+    opacity: 0; transition: opacity 0.35s;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 1.1rem 1.2rem;
+  }
+  .gc:hover .gc-overlay { opacity: 1; }
+  .gc-num {
+    position: absolute; top: 0.8rem; left: 0.9rem;
+    font-size: 0.48rem; letter-spacing: 0.2em; color: rgba(200,169,110,0.5);
+  }
+  .gc-title { font-family:'DM Serif Display',serif; font-size:1rem; color:var(--paper); }
+  .gc-meta { font-size:0.5rem; letter-spacing:0.15em; color:var(--gold); text-transform:uppercase; margin-top:0.2rem; }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative; z-index: 2;
+    padding: 1.8rem 3rem; border-top: 1px solid rgba(138,132,120,0.12);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  footer p { font-size:0.52rem; letter-spacing:0.18em; color:var(--stone); text-transform:uppercase; }
+  footer p span { color:var(--gold); }
+  .back-home {
+    font-size:0.55rem; letter-spacing:0.2em; color:var(--stone);
+    text-decoration:none; text-transform:uppercase; transition:color 0.2s;
+  }
+  .back-home:hover { color:var(--gold); }
+
+  /* ── REVEAL ── */
+  .reveal { opacity:0; transform:translateY(24px); transition:opacity .7s ease,transform .7s ease; }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+
+  /* ── NOISE ── */
+  body::after {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:9000; opacity:0.35;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  @media (max-width: 900px) {
+    .gallery-grid { grid-template-columns: repeat(2,1fr); }
+    .gallery-grid .gc:nth-child(7n) { grid-column: 1/-1; }
+    nav { padding: 1.2rem 1.5rem; }
+    .gallery-wrap { padding: 2rem 1.5rem; }
+    .page-header { padding: 4rem 1.5rem 2rem; }
+  }
+  @media (max-width: 600px) {
+    .gallery-grid { grid-template-columns: 1fr; }
+    .gallery-grid .gc:nth-child(7n) { grid-column: auto; aspect-ratio: 16/9; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<div id="loader">
+  <div id="loader-text">LOADING GALLERY</div>
+  <div id="loader-bar"></div>
+</div>
+
+<div id="ascii-sky"></div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+  <button class="lb-close" onclick="closeLB()">✕</button>
+  <button class="lb-nav" id="lb-prev" onclick="lbNav(-1)">‹</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption">
+    <div id="lightbox-title"></div>
+    <div id="lightbox-meta"></div>
+  </div>
+  <button class="lb-nav" id="lb-next" onclick="lbNav(1)">›</button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">SAN<span>▲</span>VI</a>
+  <ul class="nav-links">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="gallery.html" class="active">Gallery</a></li>
+    <li><a href="index.html#about">About</a></li>
+    <li><a href="index.html#contact">Contact</a></li>
+  </ul>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header reveal">
+  <div class="page-header-inner">
+    <div>
+      <p class="page-eyebrow">▲ Sanvi Kurade</p>
+      <h1 class="page-title">Photo<br><em>Gallery</em></h1>
+    </div>
+    <div class="page-count">
+      <span>16</span>
+      Photographs
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY GRID: 16 PHOTOS -->
+<div class="gallery-wrap">
+  <div class="gallery-grid" id="galleryGrid">
+
+    <div class="gc reveal" onclick="openLB(0)">
+      <div class="gc-ph">test1.png</div>
+      <img src="test1.png" alt="Photo 1" onerror="this.style.display='none'">
+      <div class="gc-num">01</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 1</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(1)">
+      <div class="gc-ph">test2.png</div>
+      <img src="test2.png" alt="Photo 2" onerror="this.style.display='none'">
+      <div class="gc-num">02</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 2</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(2)">
+      <div class="gc-ph">test3.png</div>
+      <img src="test3.png" alt="Photo 3" onerror="this.style.display='none'">
+      <div class="gc-num">03</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 3</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(3)">
+      <div class="gc-ph">test4.png</div>
+      <img src="test4.png" alt="Photo 4" onerror="this.style.display='none'">
+      <div class="gc-num">04</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 4</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(4)">
+      <div class="gc-ph">test5.png</div>
+      <img src="test5.png" alt="Photo 5" onerror="this.style.display='none'">
+      <div class="gc-num">05</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 5</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(5)">
+      <div class="gc-ph">test6.png</div>
+      <img src="test6.png" alt="Photo 6" onerror="this.style.display='none'">
+      <div class="gc-num">06</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 6</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <!-- 7th card = full-width cinematic banner -->
+    <div class="gc reveal" onclick="openLB(6)">
+      <div class="gc-ph">test7.png</div>
+      <img src="test7.png" alt="Photo 7" onerror="this.style.display='none'">
+      <div class="gc-num">07</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 7</div><div class="gc-meta">Landscape · Panoramic</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(7)">
+      <div class="gc-ph">test8.png</div>
+      <img src="test8.png" alt="Photo 8" onerror="this.style.display='none'">
+      <div class="gc-num">08</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 8</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(8)">
+      <div class="gc-ph">test9.png</div>
+      <img src="test9.png" alt="Photo 9" onerror="this.style.display='none'">
+      <div class="gc-num">09</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 9</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(9)">
+      <div class="gc-ph">test10.png</div>
+      <img src="test10.png" alt="Photo 10" onerror="this.style.display='none'">
+      <div class="gc-num">10</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 10</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(10)">
+      <div class="gc-ph">test11.png</div>
+      <img src="test11.png" alt="Photo 11" onerror="this.style.display='none'">
+      <div class="gc-num">11</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 11</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(11)">
+      <div class="gc-ph">test12.png</div>
+      <img src="test12.png" alt="Photo 12" onerror="this.style.display='none'">
+      <div class="gc-num">12</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 12</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(12)">
+      <div class="gc-ph">test13.png</div>
+      <img src="test13.png" alt="Photo 13" onerror="this.style.display='none'">
+      <div class="gc-num">13</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 13</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(13)">
+      <div class="gc-ph">test14.png</div>
+      <img src="test14.png" alt="Photo 14" onerror="this.style.display='none'">
+      <div class="gc-num">14</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 14</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+    <!-- 14th is 7n*2 = full-width banner -->
+    <div class="gc reveal" onclick="openLB(14)">
+      <div class="gc-ph">test15.png</div>
+      <img src="test15.png" alt="Photo 15" onerror="this.style.display='none'">
+      <div class="gc-num">15</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 15</div><div class="gc-meta">Landscape · Panoramic</div></div>
+    </div>
+
+    <div class="gc reveal" onclick="openLB(15)">
+      <div class="gc-ph">test16.png</div>
+      <img src="test16.png" alt="Photo 16" onerror="this.style.display='none'">
+      <div class="gc-num">16</div>
+      <div class="gc-overlay"><div class="gc-title">Photo 16</div><div class="gc-meta">Landscape · Series</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p>© 2025 <span>Sanvi Kurade</span> — All rights reserved</p>
+  <a href="index.html" class="back-home">← Back to Home</a>
+</footer>
+
+<script>
+// ── LOADER ──
+window.addEventListener('load', () => { setTimeout(() => document.getElementById('loader').classList.add('hide'), 1800); });
+
+// ── CURSOR ──
+const dot=document.getElementById('cursorDot'), ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx-3+'px'; dot.style.top=my-3+'px'; });
+(function animRing(){ rx+=(mx-rx)*0.15; ry+=(my-ry)*0.15; ring.style.left=rx-14+'px'; ring.style.top=ry-14+'px'; requestAnimationFrame(animRing); })();
+document.querySelectorAll('a,button,.gc').forEach(el => {
+  el.addEventListener('mouseenter',()=>{ ring.style.width='46px'; ring.style.height='46px'; });
+  el.addEventListener('mouseleave',()=>{ ring.style.width='28px'; ring.style.height='28px'; });
+});
+
+// ── LIGHTBOX ──
+const photos = [
+  { src:'test1.png',  title:'Photo 1',  meta:'Landscape · Series' },
+  { src:'test2.png',  title:'Photo 2',  meta:'Landscape · Series' },
+  { src:'test3.png',  title:'Photo 3',  meta:'Landscape · Series' },
+  { src:'test4.png',  title:'Photo 4',  meta:'Landscape · Series' },
+  { src:'test5.png',  title:'Photo 5',  meta:'Landscape · Series' },
+  { src:'test6.png',  title:'Photo 6',  meta:'Landscape · Series' },
+  { src:'test7.png',  title:'Photo 7',  meta:'Landscape · Panoramic' },
+  { src:'test8.png',  title:'Photo 8',  meta:'Landscape · Series' },
+  { src:'test9.png',  title:'Photo 9',  meta:'Landscape · Series' },
+  { src:'test10.png', title:'Photo 10', meta:'Landscape · Series' },
+  { src:'test11.png', title:'Photo 11', meta:'Landscape · Series' },
+  { src:'test12.png', title:'Photo 12', meta:'Landscape · Series' },
+  { src:'test13.png', title:'Photo 13', meta:'Landscape · Series' },
+  { src:'test14.png', title:'Photo 14', meta:'Landscape · Series' },
+  { src:'test15.png', title:'Photo 15', meta:'Landscape · Panoramic' },
+  { src:'test16.png', title:'Photo 16', meta:'Landscape · Series' },
+];
+
+let lbIdx = 0;
+
+function openLB(i) {
+  lbIdx = i;
+  showLB();
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLB() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function showLB() {
+  const p = photos[lbIdx];
+  document.getElementById('lightbox-img').src = p.src;
+  document.getElementById('lightbox-title').textContent = p.title;
+  document.getElementById('lightbox-meta').textContent = p.meta;
+}
+function lbNav(dir) {
+  lbIdx = (lbIdx + dir + photos.length) % photos.length;
+  showLB();
+}
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'Escape')     closeLB();
+});
+// Click backdrop to close
+document.getElementById('lightbox').addEventListener('click', e => { if (e.target === document.getElementById('lightbox')) closeLB(); });
+
+// ── FISH ──
+const skyFish = [
+  { l:[`><(((º>`,`><((( >`], r:[`<º)))><`,`< )))><`], size:'0.7rem', w:4 },
+  { l:[`>°)))><`], r:[`<(((°<`], size:'0.68rem', w:3 },
+  { l:[` *-*-*\n* º  *-\n *-*-*`], r:[`  *-*-*\n-*  º *\n  *-*-*`], size:'0.62rem', w:2 },
+  { l:[`  º\\/\\/\\/\\--`], r:[`--/\\/\\/\\/º`], size:'0.62rem', w:2 },
+  { l:[`>·(º>`,`>=(º>`], r:[`<º)·<`,`<º)=<`], size:'0.7rem', w:3 },
+  { l:[` o)>\n o)>  o)>`], r:[`<(o \n<(o  <(o`], size:'0.62rem', w:2 },
+];
+const pool=[], entities=[];
+skyFish.forEach((f,i)=>{ for(let w=0;w<f.w;w++) pool.push(i); });
+
+function spawnFish(){
+  const el=document.createElement('div');
+  el.className='ascii-entity';
+  const fromRight=Math.random()>.5;
+  const spec=skyFish[pool[Math.floor(Math.random()*pool.length)]];
+  const frames=fromRight?spec.r:spec.l;
+  el.textContent=frames[0];
+  el.style.fontSize=spec.size;
+  el.style.opacity=(Math.random()*.2+0.15).toFixed(2);
+  const y=Math.random()*88+2;
+  const speed=Math.random()*.9+0.25;
+  let x=fromRight?110:-20;
+  el.style.top=y+'vh'; el.style.left=x+'vw';
+  document.getElementById('ascii-sky').appendChild(el);
+  let fi=0;
+  const wig=setInterval(()=>{ if(!el.isConnected){clearInterval(wig);return;} fi=(fi+1)%frames.length; el.textContent=frames[fi]; },350+Math.random()*400);
+  return {el,x,y,speed,dir:fromRight?-1:1,wave:Math.random()*Math.PI*2,waveAmp:Math.random()*1.2+0.4,wig};
+}
+
+for(let i=0;i<10;i++){ const e=spawnFish(); e.x=Math.random()*100; entities.push(e); }
+
+let frame=0;
+(function anim(){
+  frame++;
+  if(frame%120===0&&Math.random()>.4) entities.push(spawnFish());
+  for(let i=entities.length-1;i>=0;i--){
+    const e=entities[i];
+    e.x+=e.speed*e.dir*0.1;
+    const yo=Math.sin(frame*0.025+e.wave)*e.waveAmp;
+    e.el.style.left=e.x+'vw'; e.el.style.top=(e.y+yo)+'vh';
+    if((e.dir===-1&&e.x<-25)||(e.dir===1&&e.x>118)){ clearInterval(e.wig); e.el.remove(); entities.splice(i,1); }
+  }
+  requestAnimationFrame(anim);
+})();
+
+// ── REVEAL ──
+const obs=new IntersectionObserver(entries=>entries.forEach((en,i)=>{ if(en.isIntersecting) setTimeout(()=>en.target.classList.add('visible'),i*40); }),{threshold:0.05});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
